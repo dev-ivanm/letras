@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>¡Sílaba Loca! - Juego de Palabras</title>
+    <style>
+        /* --- ESTILOS VISUALES INFANTILES Y PASTEL --- */
+        :root {
+            --bg-gradient: radial-gradient(circle, #f0fdf4 0%, #fffbeb 100%);
+            --color-correct: #4ade80;
+            --color-incorrect: #f87171;
+            --color-accent: #fef08a;
+            --text-main: #1e293b;
+            --bubble-bg: #e0f2fe;
+            --border-radius-lg: 32px;
+            --border-radius-md: 20px;
+            --font-family: 'Comic Sans MS', 'Chalkboard SE', 'Segoe UI', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* --- CONTENEDOR PRINCIPAL DEL JUEGO --- */
+        .game-wrapper {
+            width: 100%;
+            max-width: 620px;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: var(--border-radius-lg);
+            border: 6px solid #ffffff;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06), 0 0 0 6px rgba(254, 240, 138, 0.5);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* --- CABECERA (SCORE Y PROGRESO) --- */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fffbeb;
+            padding: 12px 20px;
+            border-radius: var(--border-radius-md);
+            border: 3px dashed #fef08a;
+        }
+
+        .score-box {
+            background: #fef08a;
+            color: #b45309;
+            font-weight: 900;
+            font-size: 1.4rem;
+            padding: 8px 18px;
+            border-radius: 50px;
+            border: 3px solid #facc15;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 6px 0 #facc15;
+            transform: translateY(-2px);
+            transition: all 0.2s ease;
+        }
+
+        .score-box.pop {
+            transform: scale(1.2) translateY(-2px);
+        }
+
+        .progress-box {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: bold;
+            font-size: 1.1rem;
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: 3px solid #7dd3fc;
+        }
+
+        /* --- BARRA DE PROGRESO --- */
+        .progress-bar-bg {
+            width: 100%;
+            height: 16px;
+            background: #f1f5f9;
+            border-radius: 50px;
+            overflow: hidden;
+            border: 3px solid #e2e8f0;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            border-radius: 50px;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- ÁREA CENTRAL (IMAGEN Y DEFINICIÓN) --- */
+        .challenge-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 0;
+        }
+
+        .emoji-illustration {
+            font-size: 96px;
+            line-height: 1;
+            filter: drop-shadow(0 10px 8px rgba(0,0,0,0.08));
+            animation: bounce-slow 3s infinite ease-in-out;
+            display: inline-block;
+        }
+
+        /* BURBUJA DE PISTAS */
+        .tip-bubble {
+            background: var(--bubble-bg);
+            border-radius: var(--border-radius-md);
+            padding: 14px 20px;
+            font-size: 1.05rem;
+            font-weight: bold;
+            color: #0369a1;
+            position: relative;
+            max-width: 90%;
+            box-shadow: 0 5px 0 #bae6fd;
+            line-height: 1.4;
+            text-align: center;
+            animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .tip-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 12px;
+            border-style: solid;
+            border-color: transparent transparent var(--bubble-bg) transparent;
+        }
+
+        .api-tag {
+            font-size: 0.7rem;
+            background: #6366f1;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin-left: 6px;
+            display: inline-block;
+            vertical-align: middle;
+            font-weight: 800;
+        }
+
+        /* --- REPRESENTACIÓN DE LA PALABRA INCOMPLETA --- */
+        .word-holder {
+            display: flex;
+            gap: 6px;
+            font-size: 3.4rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .syllable-static {
+            color: var(--text-main);
+        }
+
+        .syllable-blank {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            min-width: 80px;
+            height: 75px;
+            background: #fef08a;
+            border-radius: var(--border-radius-md);
+            border: 4px dashed #eab308;
+            color: #ca8a04;
+            animation: border-pulse 1.5s infinite;
+            font-size: 3rem;
+            position: relative;
+        }
+
+        /* Efecto de parpadeo del guion bajo si está vacío */
+        .syllable-blank::after {
+            content: '_';
+            position: absolute;
+            bottom: 8px;
+            font-size: 2.8rem;
+            animation: cursor-blink 1s infinite;
+            display: block;
+            color: #ca8a04;
+        }
+
+        .syllable-blank.filled-correct {
+            background: #dcfce7;
+            border: 4px solid #22c55e;
+            color: #15803d;
+            animation: pop-in 0.3s forwards;
+        }
+        .syllable-blank.filled-correct::after { display: none; }
+
+        .syllable-blank.filled-incorrect {
+            background: #fee2e2;
+            border: 4px solid #ef4444;
+            color: #b91c1c;
+            animation: shake-anim 0.5s ease-in-out;
+        }
+        .syllable-blank.filled-incorrect::after { display: none; }
+
+        /* --- CONTENEDOR DE BOTONES DE SÍLABAS --- */
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            width: 100%;
+        }
+
+        .option-button {
+            background: #ffffff;
+            border: 4px solid #e2e8f0;
+            border-radius: var(--border-radius-md);
+            padding: 18px 10px;
+            font-size: 2.1rem;
+            font-weight: 900;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 8px 0 #cbd5e1;
+            text-transform: lowercase;
+            outline: none;
+        }
+
+        .option-button:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #cbd5e1;
+        }
+
+        /* Colores vivos personalizados por posición para que sea alegre */
+        .option-button:nth-child(1) { border-color: #fca5a5; color: #dc2626; box-shadow: 0 8px 0 #f87171; }
+        .option-button:nth-child(1):active { box-shadow: 0 2px 0 #f87171; }
+
+        .option-button:nth-child(2) { border-color: #93c5fd; color: #2563eb; box-shadow: 0 8px 0 #60a5fa; }
+        .option-button:nth-child(2):active { box-shadow: 0 2px 0 #60a5fa; }
+
+        .option-button:nth-child(3) { border-color: #86efac; color: #16a34a; box-shadow: 0 8px 0 #4ade80; }
+        .option-button:nth-child(3):active { box-shadow: 0 2px 0 #4ade80; }
+
+        /* Estados de respuesta en botones */
+        .option-button.correct-feedback {
+            background-color: #dcfce7 !important;
+            border-color: #22c55e !important;
+            color: #15803d !important;
+            box-shadow: 0 8px 0 #22c55e !important;
+            transform: scale(1.05);
+        }
+
+        .option-button.incorrect-feedback {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #b91c1c !important;
+            box-shadow: 0 8px 0 #ef4444 !important;
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        /* --- BOLSA DE PREMIOS --- */
+        .prizes-panel {
+            background: #f8fafc;
+            border-radius: var(--border-radius-md);
+            padding: 14px;
+            border: 3px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .prizes-panel-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .prizes-flex {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            min-height: 52px;
+            max-height: 120px;
+            overflow-y: auto;
+            padding: 6px;
+            background: #ffffff;
+            border-radius: 14px;
+            border: 3px inset #f1f5f9;
+        }
+
+        .prize-emoji {
+            font-size: 32px;
+            display: inline-block;
+            animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .prize-emoji.removing {
+            animation: bounce-out 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+        }
+
+        /* --- PANTALLA JUEGO TERMINADO --- */
+        .end-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.99);
+            border-radius: var(--border-radius-lg);
+            z-index: 100;
+            padding: 24px;
+        }
+
+        .end-screen.visible {
+            display: flex;
+            animation: fade-in 0.4s forwards;
+        }
+
+        .trophy-animation {
+            font-size: 110px;
+            animation: bounce-slow 2s infinite ease-in-out;
+        }
+
+        .btn-restart {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: white;
+            font-weight: 900;
+            font-size: 1.6rem;
+            padding: 16px 42px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.35);
+            transition: transform 0.1s ease;
+        }
+
+        .btn-restart:active {
+            transform: scale(0.95);
+        }
+
+        /* --- CONTENEDOR DE CONFETI --- */
+        #confetti-box {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 999;
+            overflow: hidden;
+        }
+
+        .confetti-dot {
+            position: absolute;
+            top: -20px;
+            opacity: 0.85;
+            animation: fall-down linear forwards;
+        }
+
+        /* --- ANIMACIONES CSS --- */
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-12px) scale(1.04); }
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes pop-in {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes bounce-in {
+            0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+            70% { transform: scale(1.4) rotate(15deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        @keyframes bounce-out {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            30% { transform: scale(1.3) rotate(-10deg); }
+            100% { transform: scale(0) rotate(45deg); opacity: 0; }
+        }
+
+        @keyframes shake-anim {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+
+        @keyframes border-pulse {
+            0%, 100% { border-color: #eab308; box-shadow: 0 0 4px rgba(234, 179, 8, 0.2); }
+            50% { border-color: #ef4444; box-shadow: 0 0 16px rgba(239, 68, 68, 0.5); }
+        }
+
+        @keyframes cursor-blink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fall-down {
+            to {
+                transform: translateY(105vh) rotate(360deg);
+            }
+        }
+
+        /* --- DISEÑO ADAPTATIVO MÓVIL --- */
+        @media (max-width: 480px) {
+            body {
+                padding: 8px;
+            }
+
+            .game-wrapper {
+                padding: 16px;
+                gap: 14px;
+                border-radius: var(--border-radius-md);
+            }
+
+            .emoji-illustration {
+                font-size: 76px;
+            }
+
+            .word-holder {
+                font-size: 2.5rem;
+            }
+
+            .syllable-blank {
+                min-width: 60px;
+                height: 58px;
+                font-size: 2.2rem;
+            }
+
+            .syllable-blank::after {
+                font-size: 2.2rem;
+            }
+
+            .option-button {
+                font-size: 1.6rem;
+                padding: 14px 6px;
+                box-shadow: 0 5px 0 #cbd5e1;
+            }
+
+            .option-button:active {
+                transform: translateY(4px);
+                box-shadow: 0 1px 0 #cbd5e1;
+            }
+
+            .tip-bubble {
+                font-size: 0.95rem;
+                padding: 10px 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Capa receptora del confeti dinámico -->
+    <div id="confetti-box"></div>
+
+    <div class="game-wrapper">
+        
+        <!-- Pantalla de Resultados Finales -->
+        <div id="endGameModal" class="end-screen">
+            <div class="trophy-animation">🏆</div>
+            <h1 style="color: #ea580c; font-size: 2.2rem; font-weight: 900; text-align: center;">¡ERES SÚPER INTELIGENTE!</h1>
+            <p style="font-size: 1.3rem; font-weight: bold; text-align: center; color: #475569;">
+                ¡Completaste las 50 palabras mágicas!
+            </p>
+            <div id="finalScoreDisplay" style="font-size: 1.7rem; font-weight: 900; color: #db2777;">
+                Puntuación: 0 Puntos
+            </div>
+            
+            <div style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+                <p style="font-weight: 800; color: #854d0e; text-align: center;">Tu Gran Botín de Premios:</p>
+                <div id="finalPrizesFlex" class="prizes-flex" style="max-height: 140px; background: #fffbeb;"></div>
+            </div>
+
+            <button class="btn-restart" onclick="resetAllGame()">¡Jugar de nuevo! 🔄</button>
+        </div>
+
+        <!-- Encabezado con información del juego -->
+        <div class="game-header">
+            <div class="score-box" id="scoreValueContainer">
+                🍬 <span id="currentScore">0</span>
+            </div>
+            <div class="progress-box" id="currentProgressText">
+                Palabra 1 de 50
+            </div>
+        </div>
+
+        <!-- Barra visual de avance general -->
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressBarValue"></div>
+        </div>
+
+        <!-- Desafío del nivel actual -->
+        <div class="challenge-area">
+            <!-- Representación gráfica -->
+            <div class="emoji-illustration" id="emojiTarget">🐱</div>
+            
+            <!-- Definición interactiva o pista local/API -->
+            <div class="tip-bubble">
+                <span id="clueText">Un amiguito de cuatro patas que maúlla y hace ¡miau! 🐾</span>
+                <span id="indicatorRAE" class="api-tag" style="display: none;">RAE</span>
+            </div>
+
+            <!-- Estructura silábica de la palabra -->
+            <div class="word-holder" id="syllablesContainer">
+                <!-- Inyectado de forma dinámica -->
+            </div>
+        </div>
+
+        <!-- Teclado silábico de opciones -->
+        <div class="options-grid" id="optionsGrid">
+            <!-- Tres botones inyectados dinámicamente -->
+        </div>
+
+        <!-- Bolsa de Premios Acumulada -->
+        <div class="prizes-panel">
+            <div class="prizes-panel-title">🎁 Mis Dulces Ganados (<span id="prizesCountLabel">0</span>)</div>
+            <div class="prizes-flex" id="prizesDisplayBox">
+                <!-- Los premios se acumularán o perderán aquí -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- BANCO EXCLUSIVO DE 50 PALABRAS ---
+        // Cada palabra tiene su estructura silábica, opciones de respuesta (correcta es la primera) y pista educativa nativa.
+        const dictionaryLevels = [
+            { word: "gato", emoji: "🐱", prefix: "ga", suffix: "", missing: "to", options: ["to", "lo", "so"], kidDef: "Un amiguito de cuatro patas que maúlla y hace ¡miau! 🐾" },
+            { word: "perro", emoji: "🐶", prefix: "pe", suffix: "", missing: "rro", options: ["rro", "rra", "rri"], kidDef: "El mejor amigo de las personas, cuida la casa y mueve la cola. 🦴" },
+            { word: "manzana", emoji: "🍎", prefix: "man", suffix: "na", missing: "za", options: ["za", "na", "sa"], kidDef: "Una fruta redonda, crujiente y dulce. ¡Roja o verde! 🍏" },
+            { word: "coche", emoji: "🚗", prefix: "co", suffix: "", missing: "che", options: ["che", "cha", "cho"], kidDef: "Un vehículo con cuatro ruedas que papá o mamá conducen. 🚗" },
+            { word: "sol", emoji: "☀️", prefix: "so", suffix: "", missing: "l", options: ["l", "n", "r"], kidDef: "La estrella gigante que nos calienta y nos da luz por el día. ☀️" },
+            { word: "león", emoji: "🦁", prefix: "le", suffix: "", missing: "ón", options: ["ón", "an", "en"], kidDef: "El rey de la selva. ¡Tiene una gran melena y ruge fuerte! 🦁" },
+            { word: "elefante", emoji: "🐘", prefix: "ele", suffix: "te", missing: "fan", options: ["fan", "fin", "fon"], kidDef: "Un animal enorme que tiene orejas gigantes y una trompa larga. 🐘" },
+            { word: "pez", emoji: "🐟", prefix: "pe", suffix: "", missing: "z", options: ["z", "s", "c"], kidDef: "Nada sin parar en el agua moviendo sus aletas brillantes. 🐟" },
+            { word: "pájaro", emoji: "🐦", prefix: "pá", suffix: "ro", missing: "ja", options: ["ja", "jo", "je"], kidDef: "Tiene alas de colores, vuela alto y canta por las mañanas. 🐦" },
+            { word: "helado", emoji: "🍦", prefix: "hela", suffix: "", missing: "do", options: ["do", "da", "de"], kidDef: "Un postre súper frío y dulce de fresa o chocolate. 🍦" },
+            { word: "globo", emoji: "🎈", prefix: "glo", suffix: "", missing: "bo", options: ["bo", "ba", "be"], kidDef: "Se llena de aire, vuela alto y decora los cumpleaños. 🎈" },
+            { word: "regalo", emoji: "🎁", prefix: "re", suffix: "lo", missing: "ga", options: ["ga", "go", "gu"], kidDef: "Una bonita sorpresa dentro de una caja con lazo brillante. 🎁" },
+            { word: "casa", emoji: "🏠", prefix: "ca", suffix: "", missing: "sa", options: ["sa", "se", "si"], kidDef: "El lugar calientito donde vivimos y dormimos con amor. 🏠" },
+            { word: "árbol", emoji: "🌳", prefix: "ár", suffix: "l", missing: "bo", options: ["bo", "ba", "be"], kidDef: "Planta gigante con tronco de madera y muchas hojas verdes. 🌳" },
+            { word: "flor", emoji: "🌸", prefix: "flo", suffix: "", missing: "r", options: ["r", "l", "n"], kidDef: "Crece en la tierra, tiene pétalos hermosos y huele delicioso. 🌸" },
+            { word: "pizza", emoji: "🍕", prefix: "pi", suffix: "a", missing: "zz", options: ["zz", "za", "ce"], kidDef: "Masa redonda con salsa de tomate y delicioso queso derretido. 🍕" },
+            { word: "pelota", emoji: "🏀", prefix: "pe", suffix: "ta", missing: "lo", options: ["lo", "la", "le"], kidDef: "Es redonda, rebota y jugamos con ella en el patio. 🏀" },
+            { word: "libro", emoji: "📚", prefix: "li", suffix: "", missing: "bro", options: ["bro", "bra", "bre"], kidDef: "Tiene páginas llenas de dibujos hermosos e historias fantásticas. 📚" },
+            { word: "música", emoji: "🎵", prefix: "mú", suffix: "ca", missing: "si", options: ["si", "sa", "se"], kidDef: "Sonidos alegres que entran por el oído y te hacen bailar. 🎵" },
+            { word: "lápiz", emoji: "🖍️", prefix: "lá", suffix: "iz", missing: "p", options: ["p", "b", "d"], kidDef: "Es de madera y sirve para dibujar cosas hermosas en papel. 🖍️" },
+            { word: "uva", emoji: "🍇", prefix: "u", suffix: "", missing: "va", options: ["va", "ve", "vi"], kidDef: "Pequeñas bolitas dulces que crecen juntas en un racimo. 🍇" },
+            { word: "sandía", emoji: "🍉", prefix: "san", suffix: "a", missing: "dí", options: ["dí", "da", "de"], kidDef: "Una fruta gigante verde por fuera y muy roja por dentro. 🍉" },
+            { word: "plátano", emoji: "🍌", prefix: "plá", suffix: "no", missing: "ta", options: ["ta", "te", "ti"], kidDef: "Fruta amarilla que se pela fácil, dulce y sabrosa. 🍌" },
+            { word: "fresa", emoji: "🍓", prefix: "fre", suffix: "", missing: "sa", options: ["sa", "se", "si"], kidDef: "Pequeña fruta muy roja, dulce y perfumada con semillas pequeñitas. 🍓" },
+            { word: "zanahoria", emoji: "🥕", prefix: "zana", suffix: "ria", missing: "ho", options: ["ho", "ha", "he"], kidDef: "Verdura naranja y crujiente, ¡la favorita de los conejos! 🥕" },
+            { word: "pan", emoji: "🍞", prefix: "pa", suffix: "", missing: "n", options: ["n", "m", "ñ"], kidDef: "Alimento rico que usamos para armar ricos emparedados. 🍞" },
+            { word: "queso", emoji: "🧀", prefix: "que", suffix: "", missing: "so", options: ["so", "sa", "se"], kidDef: "Comida de color amarillo hecha con leche que comen los ratones. 🧀" },
+            { word: "leche", emoji: "🥛", prefix: "le", suffix: "", missing: "che", options: ["che", "cha", "cho"], kidDef: "Bebida blanca muy saludable que nos da la vaquita. 🥛" },
+            { word: "pollo", emoji: "🍗", prefix: "po", suffix: "", missing: "llo", options: ["llo", "lla", "lle"], kidDef: "Ave de plumas amarillas que nace de un huevo y hace pío pío. 🐥" },
+            { word: "oso", emoji: "🧸", prefix: "o", suffix: "", missing: "so", options: ["so", "sa", "se"], kidDef: "Animal grande y pachoncito que vive en bosques de pinos. 🧸" },
+            { word: "bicicleta", emoji: "Bicicleta 🚲", prefix: "bici", suffix: "ta", missing: "cle", options: ["cle", "cla", "clo"], kidDef: "Tiene dos ruedas y pedales para pasear sintiendo el viento. 🚲" },
+            { word: "estrella", emoji: "⭐", prefix: "estre", suffix: "", missing: "lla", options: ["lla", "lle", "llo"], kidDef: "Brilla en el cielo oscuro junto a la luna por la noche. ⭐" },
+            { word: "luna", emoji: "🌙", prefix: "lu", suffix: "", missing: "na", options: ["na", "ne", "ni"], kidDef: "La gran compañera de la noche que brilla redonda o curva. 🌙" },
+            { word: "playa", emoji: "🏖️", prefix: "pla", suffix: "", missing: "ya", options: ["ya", "ye", "yo"], kidDef: "Lugar con arena dorada y olas de mar donde hacemos castillos. 🏖️" },
+            { word: "arcoíris", emoji: "🌈", prefix: "arcoí", suffix: "is", missing: "r", options: ["r", "l", "s"], kidDef: "Arco de siete colores hermosos que sale cuando llueve y hay sol. 🌈" },
+            { word: "navidad", emoji: "🎄", prefix: "navi", suffix: "", missing: "dad", options: ["dad", "das", "dan"], kidDef: "Época del año con luces, arbolitos de pino y regalos en familia. 🎄" },
+            { word: "unicornio", emoji: "🦄", prefix: "uni", suffix: "nio", missing: "cor", options: ["cor", "car", "cur"], kidDef: "Caballito mágico de cuentos con un cuerno brillante de colores. 🦄" },
+            { word: "pingüino", emoji: "🐧", prefix: "pingüi", suffix: "", missing: "no", options: ["no", "na", "ne"], kidDef: "Ave de traje elegante blanco y negro que camina gracioso en el hielo. 🐧" },
+            { word: "mariposa", emoji: "🦋", prefix: "mari", suffix: "sa", missing: "po", options: ["po", "pa", "pe"], kidDef: "Insecto con alitas de hermosos colores que vuela entre las flores. 🦋" },
+            { word: "mariquita", emoji: "🐞", prefix: "mari", suffix: "ita", missing: "qu", options: ["qu", "cu", "gu"], kidDef: "Escarabajo pequeño y redondo, rojo con puntitos negros. 🐞" },
+            { word: "caracol", emoji: "🐚", prefix: "cara", suffix: "", missing: "col", options: ["col", "cal", "cel"], kidDef: "Camina muy despacito y lleva su casita redonda en la espalda. 🐚" },
+            { word: "abeja", emoji: "🐝", prefix: "abe", suffix: "", missing: "ja", options: ["ja", "je", "ji"], kidDef: "Insecto que vuela de flor en flor haciendo zumbidos y fabrica miel. 🐝" },
+            { word: "búho", emoji: "🦉", prefix: "bú", suffix: "o", missing: "h", options: ["h", "b", "d"], kidDef: "Ave con ojos gigantes que vigila de noche desde las ramas del árbol. 🦉" },
+            { word: "lobo", emoji: "🐺", prefix: "lo", suffix: "", missing: "bo", options: ["bo", "ba", "be"], kidDef: "Animal parecido a un perrito que vive libre en la montaña y aúlla a la luna. 🐺" },
+            { word: "zorro", emoji: "🦊", prefix: "zo", suffix: "", missing: "rro", options: ["rro", "rra", "rri"], kidDef: "Animal salvaje muy astuto de color naranja con cola esponjosa. 🦊" },
+            { word: "panda", emoji: "🐼", prefix: "pan", suffix: "", missing: "da", options: ["da", "de", "di"], kidDef: "Gran oso blanco y negro que adora comer ramas verdes de bambú. 🐼" },
+            { word: "koala", emoji: "🐨", prefix: "koa", suffix: "", missing: "la", options: ["la", "le", "li"], kidDef: "Pequeño oso de felpa que vive trepado abrazando los árboles. 🐨" },
+            { word: "jirafa", emoji: "🦒", prefix: "ji", suffix: "fa", missing: "ra", options: ["ra", "re", "ri"], kidDef: "El animal más alto con un cuello gigante para comer hojas altas. 🦒" },
+            { word: "cocodrilo", emoji: "🐊", prefix: "coco", suffix: "lo", missing: "dri", options: ["dri", "dra", "dro"], kidDef: "Gran reptil verde de dientes filosos que nada en los ríos. 🐊" },
+            { word: "orangután", emoji: "🦧", prefix: "oran", suffix: "tán", missing: "gu", options: ["gu", "ga", "go"], kidDef: "Gran mono de brazos largos y pelo naranja que se columpia feliz. 🦧" }
+        ];
+
+        // Caja de premios para el niño
+        const availablePrizes = ["🍭", "🍬", "🍦", "🧁", "🍫", "🎈"];
+
+        // --- ESTADO GENERAL DEL JUEGO ---
+        let currentWordIndex = 0;
+        let scoreCounter = 0;
+        let blockInteraction = false;
+        let customAudioCtx = null;
+        let prizeCollection = [];
+
+        // --- SINTETIZADOR DE EFECTOS DE AUDIO (Web Audio API) ---
+        function startAudioEnvironment() {
+            if (!customAudioCtx) {
+                customAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (customAudioCtx.state === 'suspended') {
+                customAudioCtx.resume();
+            }
+        }
+
+        function playSuccessSound() {
+            try {
+                startAudioEnvironment();
+                if (!customAudioCtx) return;
+                const time = customAudioCtx.currentTime;
+                
+                const osc = customAudioCtx.createOscillator();
+                const gain = customAudioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(customAudioCtx.destination);
+                
+                osc.type = 'triangle'; // Sonido suave e infantil
+                osc.frequency.setValueAtTime(329.63, time); // Mi (E4)
+                osc.frequency.exponentialRampToValueAtTime(523.25, time + 0.12); // Do (C5)
+                osc.frequency.exponentialRampToValueAtTime(783.99, time + 0.3); // Sol (G5)
+                
+                gain.gain.setValueAtTime(0.12, time);
+                gain.gain.linearRampToValueAtTime(0.001, time + 0.3);
+                
+                osc.start(time);
+                osc.stop(time + 0.35);
+            } catch (error) {
+                console.log("Audio temporalmente no disponible.");
+            }
+        }
+
+        function playFailSound() {
+            try {
+                startAudioEnvironment();
+                if (!customAudioCtx) return;
+                const time = customAudioCtx.currentTime;
+                
+                const osc = customAudioCtx.createOscillator();
+                const gain = customAudioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(customAudioCtx.destination);
+                
+                osc.type = 'sawtooth'; 
+                osc.frequency.setValueAtTime(180, time);
+                osc.frequency.linearRampToValueAtTime(90, time + 0.35); // Descenso divertido
+                
+                gain.gain.setValueAtTime(0.15, time);
+                gain.gain.linearRampToValueAtTime(0.001, time + 0.35);
+                
+                osc.start(time);
+                osc.stop(time + 0.4);
+            } catch (error) {
+                console.log("Audio temporalmente no disponible.");
+            }
+        }
+
+        // --- SISTEMA DE DICCIONARIO INTELIGENTE ---
+        async function fetchWordDefinition(targetWordObj) {
+            const indicatorRAE = document.getElementById('indicatorRAE');
+            const clueText = document.getElementById('clueText');
+            
+            // Paso 1: Configurar la definición didáctica local por defecto
+            clueText.innerText = targetWordObj.kidDef;
+            indicatorRAE.style.display = 'none';
+
+            // Paso 2: Intentar consulta a la API con un controlador de interrupción estricto (1 segundo)
+            const abortController = new AbortController();
+            const signalTimeout = setTimeout(() => abortController.abort(), 1000);
+
+            try {
+                const apiResponse = await fetch(`https://rae-api.com/api/words/${encodeURIComponent(targetWordObj.word.toLowerCase())}`, {
+                    signal: abortController.signal
+                });
+                
+                clearTimeout(signalTimeout);
+
+                if (apiResponse.ok) {
+                    const parsedData = await apiResponse.json();
+                    let rawDef = "";
+
+                    // Estructura de extracción
+                    if (parsedData && typeof parsedData === 'object') {
+                        rawDef = parsedData.definition || parsedData.definitions?.[0] || parsedData.meaning || "";
+                    }
+
+                    if (rawDef && rawDef.trim().length > 0) {
+                        // Limpieza básica de etiquetas HTML de la API
+                        rawDef = rawDef.replace(/<[^>]*>/g, '');
+                        if (rawDef.length > 80) {
+                            rawDef = rawDef.substring(0, 80) + "...";
+                        }
+                        // Enriquecer la explicación mezclando la divertida y la formal
+                        clueText.innerHTML = `${targetWordObj.kidDef} <br><span style="font-size: 0.85em; color: #4f46e5; font-weight: bold; display: block; margin-top: 6px;">📖 Diccionario: ${rawDef}</span>`;
+                        indicatorRAE.style.display = 'inline-block';
+                    }
+                }
+            } catch (err) {
+                clearTimeout(signalTimeout);
+                // Fallback pasivo: No hacemos nada ya que la definición amigable local ya está en pantalla
+                console.log("Uso del fallback de definición local para preservar fluidez.");
+            }
+        }
+
+        // --- MEZCLAR OPCIONES ---
+        function shuffleOptions(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // --- GESTIÓN DE PUNTUACIÓN Y PREMIOS (LÓGICA SOLICITADA) ---
+        function appendPrize() {
+            const randomPrize = availablePrizes[Math.floor(Math.random() * availablePrizes.length)];
+            prizeCollection.push(randomPrize);
+            renderPrizesCollection();
+        }
+
+        function popLastPrize() {
+            if (prizeCollection.length === 0) return;
+            
+            const prizesDisplayBox = document.getElementById('prizesDisplayBox');
+            const prizeNodes = prizesDisplayBox.querySelectorAll('.prize-emoji');
+            
+            if (prizeNodes.length > 0) {
+                const lastNode = prizeNodes[prizeNodes.length - 1];
+                lastNode.classList.add('removing');
+                // Remover del arreglo lógico
+                prizeCollection.pop();
+                
+                // Esperar a que la animación termine antes de redibujar por completo
+                setTimeout(() => {
+                    renderPrizesCollection();
+                }, 400);
+            }
+        }
+
+        function renderPrizesCollection() {
+            const prizesDisplayBox = document.getElementById('prizesDisplayBox');
+            prizesDisplayBox.innerHTML = '';
+            
+            prizeCollection.forEach(prize => {
+                const span = document.createElement('span');
+                span.className = 'prize-emoji';
+                span.innerText = prize;
+                prizesDisplayBox.appendChild(span);
+            });
+
+            document.getElementById('prizesCountLabel').innerText = prizeCollection.length;
+            prizesDisplayBox.scrollTop = prizesDisplayBox.scrollHeight; // Auto scroll
+        }
+
+        // --- CARGA DEL NIVEL ACTUAL ---
+        function loadCurrentLevel() {
+            blockInteraction = false;
+            const currentLevel = dictionaryLevels[currentWordIndex];
+
+            // Barra de progreso y texto superior
+            document.getElementById('currentProgressText').innerText = `Palabra ${currentWordIndex + 1} de ${dictionaryLevels.length}`;
+            const percentage = (currentWordIndex / dictionaryLevels.length) * 100;
+            document.getElementById('progressBarValue').style.width = `${percentage}%`;
+
+            // Carga de la ilustración Emoji
+            document.getElementById('emojiTarget').innerText = currentLevel.emoji;
+
+            // Cargar pista interactiva
+            fetchWordDefinition(currentLevel);
+
+            // Renderizar palabra incompleta
+            const syllablesContainer = document.getElementById('syllablesContainer');
+            syllablesContainer.innerHTML = '';
+
+            if (currentLevel.prefix) {
+                const staticSpan = document.createElement('span');
+                staticSpan.className = 'syllable-static';
+                staticSpan.innerText = currentLevel.prefix;
+                syllablesContainer.appendChild(staticSpan);
+            }
+
+            const blankSpan = document.createElement('span');
+            blankSpan.className = 'syllable-blank';
+            blankSpan.id = 'targetBlankCell';
+            syllablesContainer.appendChild(blankSpan);
+
+            if (currentLevel.suffix) {
+                const staticSpan2 = document.createElement('span');
+                staticSpan2.className = 'syllable-static';
+                staticSpan2.innerText = currentLevel.suffix;
+                syllablesContainer.appendChild(staticSpan2);
+            }
+
+            // Mezclar e inyectar botones de opciones
+            const optionsGrid = document.getElementById('optionsGrid');
+            optionsGrid.innerHTML = '';
+            
+            const shuffledOptions = shuffleOptions(currentLevel.options);
+            shuffledOptions.forEach(optionText => {
+                const btn = document.createElement('button');
+                btn.className = 'option-button';
+                btn.innerText = optionText;
+                btn.onclick = () => handleUserSelection(btn, optionText, currentLevel.missing);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        // --- MANEJO DE SELECCIÓN DE SÍLABA ---
+        function handleUserSelection(buttonNode, clickedVal, correctVal) {
+            if (blockInteraction) return;
+            blockInteraction = true;
+
+            const blankCell = document.getElementById('targetBlankCell');
+
+            if (clickedVal === correctVal) {
+                // --- CAMINO CORRECTO (+10 PUNTOS) ---
+                playSuccessSound();
+                buttonNode.classList.add('correct-feedback');
+                
+                blankCell.innerText = correctVal;
+                blankCell.className = 'syllable-blank filled-correct';
+
+                // Incrementar puntos e interfaz
+                scoreCounter += 10;
+                animateScoreDisplay();
+                
+                // Efecto confeti de celebración
+                triggerConfettiExplosion();
+                
+                // Otorgar dulce
+                appendPrize();
+
+                // Espera de 1.5 segundos antes de avanzar automáticamente
+                setTimeout(() => {
+                    advanceGameFlow();
+                }, 1500);
+
+            } else {
+                // --- CAMINO INCORRECTO (-5 PUNTOS, QUITA PREMIO, AVANCE AUTOMÁTICO) ---
+                playFailSound();
+                buttonNode.classList.add('incorrect-feedback');
+                
+                // Mostrar temporalmente el valor que puso el niño en rojo
+                blankCell.innerText = clickedVal;
+                blankCell.className = 'syllable-blank filled-incorrect';
+
+                // Penalización: Restar 5 puntos, nunca bajar de 0
+                scoreCounter = Math.max(0, scoreCounter - 5);
+                animateScoreDisplay();
+
+                // Penalización: Quitar último premio obtenido
+                popLastPrize();
+
+                // Mostrar el feedback correcto en el teclado silábico (glow verde)
+                const buttons = document.querySelectorAll('.option-button');
+                buttons.forEach(btn => {
+                    if (btn.innerText === correctVal) {
+                        btn.classList.add('correct-feedback');
+                    }
+                });
+
+                // Espera de 1.5 segundos antes de avanzar automáticamente
+                setTimeout(() => {
+                    // Revelar la sílaba correcta antes de irse
+                    blankCell.innerText = correctVal;
+                    blankCell.className = 'syllable-blank filled-correct';
+                    
+                    setTimeout(() => {
+                        advanceGameFlow();
+                    }, 500);
+                }, 1000);
+            }
+        }
+
+        function advanceGameFlow() {
+            currentWordIndex++;
+            if (currentWordIndex < dictionaryLevels.length) {
+                loadCurrentLevel();
+            } else {
+                showFinalCelebration();
+            }
+        }
+
+        function animateScoreDisplay() {
+            const scoreContainer = document.getElementById('scoreValueContainer');
+            document.getElementById('currentScore').innerText = scoreCounter;
+            scoreContainer.classList.add('pop');
+            setTimeout(() => {
+                scoreContainer.classList.remove('pop');
+            }, 200);
+        }
+
+        // --- SISTEMA DINÁMICO DE CELEBRACIÓN DE CONFETI (CSS PURO) ---
+        function triggerConfettiExplosion() {
+            const container = document.getElementById('confetti-box');
+            container.innerHTML = ''; // Limpieza previa
+
+            const palette = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#1a535c', '#f7fff7', '#ff8a5c'];
+            const piecesCount = 45;
+
+            for (let i = 0; i < piecesCount; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'confetti-dot';
+
+                const xStart = Math.random() * 100; // Posicionamiento horizontal aleatorio
+                const size = Math.random() * 10 + 6;
+                const duration = Math.random() * 1.4 + 1.2;
+                const color = palette[Math.floor(Math.random() * palette.length)];
+
+                dot.style.left = `${xStart}vw`;
+                dot.style.width = `${size}px`;
+                dot.style.height = `${size}px`;
+                dot.style.backgroundColor = color;
+                dot.style.animationDuration = `${duration}s`;
+                dot.style.borderRadius = '50%';
+
+                container.appendChild(dot);
+            }
+        }
+
+        // --- PANTALLA DE CIERRE ---
+        function showFinalCelebration() {
+            // Sincronizar barra de progreso completa
+            document.getElementById('progressBarValue').style.width = '100%';
+
+            const modal = document.getElementById('endGameModal');
+            document.getElementById('finalScoreDisplay').innerText = `¡Sumaste un gran total de ${scoreCounter} Puntos! 🌟`;
+
+            const finalPrizesFlex = document.getElementById('finalPrizesFlex');
+            finalPrizesFlex.innerHTML = '';
+            prizeCollection.forEach(prize => {
+                const pSpan = document.createElement('span');
+                pSpan.className = 'prize-emoji';
+                pSpan.innerText = prize;
+                finalPrizesFlex.appendChild(pSpan);
+            });
+
+            modal.classList.add('visible');
+            triggerConfettiExplosion();
+        }
+
+        // --- REINICIAR TODO ---
+        function resetAllGame() {
+            currentWordIndex = 0;
+            scoreCounter = 0;
+            prizeCollection = [];
+            
+            document.getElementById('currentScore').innerText = '0';
+            document.getElementById('prizesDisplayBox').innerHTML = '';
+            document.getElementById('prizesCountLabel').innerText = '0';
+            
+            document.getElementById('endGameModal').classList.remove('visible');
+            
+            loadCurrentLevel();
+        }
+
+        // Ejecutar inmediatamente al cargar la página
+        window.onload = () => {
+            loadCurrentLevel();
+        };
+    </script>
+</body>
+</html>
